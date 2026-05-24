@@ -6,7 +6,6 @@ import json
 import os
 import subprocess
 import urllib.parse
-import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -35,9 +34,15 @@ def fetch_papers(categories: list, keywords: list, max_results: int) -> list:
         "sortBy": "submittedDate",
         "sortOrder": "descending",
     })
-    req = urllib.request.Request(url, headers={"User-Agent": ARXIV_USER_AGENT})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        data = resp.read()
+    result = subprocess.run(
+        ["curl", "-sS", "--max-time", "30", "-A", ARXIV_USER_AGENT,
+         "-w", "\n%{http_code}", url],
+        capture_output=True, check=True, text=True,
+    )
+    body, _, status = result.stdout.rpartition("\n")
+    if status.strip() != "200":
+        raise RuntimeError(f"arXiv returned HTTP {status.strip()}")
+    data = body.encode()
     root = ET.fromstring(data)
     papers = []
     for entry in root.findall("atom:entry", ARXIV_NS):
