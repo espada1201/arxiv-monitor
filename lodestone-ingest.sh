@@ -13,4 +13,6 @@ if [[ -f "$SCRIPT_DIR/.env" ]]; then
     set +a
 fi
 
-uv run --project ~/.lodestone python -m _system.scripts.ingest "$@"
+LODESTONE_PLUGIN_DIR="$(find "$HOME/.claude/plugins/cache/piercelamb-plugins/lodestone" -name "pyproject.toml" -maxdepth 3 | head -1 | xargs dirname)"
+export LODESTONE_DB="$HOME/.lodestone/lodestone.db"
+uv run --project "$LODESTONE_PLUGIN_DIR" python -m _system.scripts.ingest "$@"
