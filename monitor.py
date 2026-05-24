@@ -5,12 +5,14 @@ import argparse
 import json
 import os
 import subprocess
+import urllib.parse
 import urllib.request
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
 ARXIV_NS = {"atom": "http://www.w3.org/2005/Atom"}
-ARXIV_API = "http://export.arxiv.org/api/query"
+ARXIV_API = "https://export.arxiv.org/api/query"
+ARXIV_USER_AGENT = "arxiv-lodestone-monitor/1.0 (https://github.com/local/arxiv-monitor)"
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_CONFIG = os.path.join(BASE_DIR, "config.json")
@@ -26,13 +28,15 @@ def _paper_id(entry_id_url: str) -> str:
 
 def fetch_papers(categories: list, keywords: list, max_results: int) -> list:
     parts = [f"cat:{c}" for c in categories] + [f"all:{k}" for k in keywords]
-    query = "+OR+".join(parts) if parts else "all:*"
-    url = (
-        f"{ARXIV_API}?search_query={query}"
-        f"&max_results={max_results}"
-        f"&sortBy=submittedDate&sortOrder=descending"
-    )
-    with urllib.request.urlopen(url, timeout=30) as resp:
+    query = " OR ".join(parts) if parts else "all:*"
+    url = ARXIV_API + "?" + urllib.parse.urlencode({
+        "search_query": query,
+        "max_results": max_results,
+        "sortBy": "submittedDate",
+        "sortOrder": "descending",
+    })
+    req = urllib.request.Request(url, headers={"User-Agent": ARXIV_USER_AGENT})
+    with urllib.request.urlopen(req, timeout=30) as resp:
         data = resp.read()
     root = ET.fromstring(data)
     papers = []
